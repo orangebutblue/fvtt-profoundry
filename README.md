@@ -12,8 +12,7 @@ The module posts a random question to chat based on the different selected categ
 `https://raw.githubusercontent.com/orangebutblue/fvtt-profoundry/main/module.json`
 
 ## Usage
-As a GM, just select the question mark icon from the Scene Controls
-
+As a GM, just select the question mark icon from the Scene controls on the left sidebar
 
 Then select the categories you want questions from (I recommend only using a single category at a time) and the number of questions you want to fetch at the same time.
 
