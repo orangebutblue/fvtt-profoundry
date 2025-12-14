@@ -377,9 +377,6 @@ class CharacterQuestions extends Application {
 Hooks.once('init', () => {
     console.log('Character Questions | Initializing module');
 
-    // Register Handlebars helpers for V2 Application templates
-    registerHandlebarsHelpers();
-
     // Register module settings
     registerModuleSettings();
 
@@ -422,114 +419,6 @@ Hooks.once('ready', async () => {
         ui.notifications.error(`Character Questions setup failed: ${error.message}`);
     }
 });
-
-/**
- * Register Handlebars helpers for V2 Application templates
- */
-function registerHandlebarsHelpers() {
-    // Equality helper for template conditionals
-    Handlebars.registerHelper('eq', function(a, b) {
-        return a === b;
-    });
-
-    // Inequality helper
-    Handlebars.registerHelper('ne', function(a, b) {
-        return a !== b;
-    });
-
-    // Greater-than-or-equal helper
-    Handlebars.registerHelper('gte', function(a, b) {
-        if (typeof a === 'string') a = Number(a);
-        if (typeof b === 'string') b = Number(b);
-        return a >= b;
-    });
-
-    // Greater-than helper
-    Handlebars.registerHelper('gt', function(a, b) {
-        if (typeof a === 'string') a = Number(a);
-        if (typeof b === 'string') b = Number(b);
-        return a > b;
-    });
-
-    // Date formatting helper
-    Handlebars.registerHelper('formatDate', function(dateString) {
-        if (!dateString) return 'Unknown';
-
-        // If it's already in the correct format (YYYY-MM-DD HH:mm), return as is
-        if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dateString)) {
-            return dateString;
-        }
-
-        // Try to parse and format the date
-        let date;
-        if (typeof dateString === 'string') {
-            date = new Date(dateString);
-        } else if (dateString instanceof Date) {
-            date = dateString;
-        } else if (typeof dateString === 'number') {
-            date = new Date(dateString);
-        } else {
-            return 'Invalid Date';
-        }
-
-        // Check if date is valid
-        if (isNaN(date.getTime())) {
-            return 'Invalid Date';
-        }
-
-        // Format as YYYY-MM-DD HH:mm
-        const year = date.getFullYear().toString();
-        const month = (date.getMonth() + 1).toString().padStart(2, '0');
-        const day = date.getDate().toString().padStart(2, '0');
-        const hours = date.getHours().toString().padStart(2, '0');
-        const minutes = date.getMinutes().toString().padStart(2, '0');
-
-        return `${year}-${month}-${day} ${hours}:${minutes}`;
-    });
-
-    // Logical AND helper
-    Handlebars.registerHelper('and', function() {
-        const args = Array.prototype.slice.call(arguments, 0, -1);
-        return args.every(Boolean);
-    });
-
-    // Logical OR helper
-    Handlebars.registerHelper('or', function() {
-        const args = Array.prototype.slice.call(arguments, 0, -1);
-        return args.some(Boolean);
-    });
-
-    // Format number helper
-    Handlebars.registerHelper('formatNumber', function(number) {
-        if (typeof number !== 'number') return number;
-        return number.toLocaleString();
-    });
-
-    // Capitalize helper
-    Handlebars.registerHelper('capitalize', function(str) {
-        if (typeof str !== 'string') return str;
-        return str.charAt(0).toUpperCase() + str.slice(1);
-    });
-
-    // Join array helper
-    Handlebars.registerHelper('join', function(array, separator) {
-        if (!Array.isArray(array)) return '';
-        return array.join(separator || ', ');
-    });
-
-    // Keys helper - get object keys
-    Handlebars.registerHelper('keys', function(obj) {
-        if (!obj || typeof obj !== 'object') return [];
-        return Object.keys(obj);
-    });
-
-    // Selected helper - for option elements
-    Handlebars.registerHelper('selected', function(value, compareValue) {
-        return value === compareValue ? 'selected' : '';
-    });
-
-    console.log('Character Questions | Handlebars helpers registered');
-}
 
 /**
  * Register module settings with FoundryVTT
@@ -721,17 +610,6 @@ async function initializeBasicSceneControls() {
             }
         });
 
-        // Wait a tick then try to force a refresh of the scene controls UI
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        if (ui.controls) {
-            console.log('Character Questions | Attempting to render scene controls UI');
-            console.log('Character Questions | Current ui.controls state:', ui.controls);
-            ui.controls.render(true);
-        } else {
-            console.warn('Character Questions | ui.controls not available');
-        }
-
     } catch (error) {
         console.error('Character Questions | Scene controls integration failed:', error);
         ui.notifications.warn('Character Questions scene controls integration failed.');
@@ -745,15 +623,22 @@ function openCharacterQuestionsDialog() {
     try {
         console.log('Character Questions | Opening floating UI');
 
+        // Use module-scoped storage instead of global window
+        const moduleScope = game.modules.get(MODULE_ID);
+        if (!moduleScope._characterQuestionsInstance) {
+            moduleScope._characterQuestionsInstance = new CharacterQuestions();
+        }
+
+        const instance = moduleScope._characterQuestionsInstance;
+
         // If already rendered, close it
-        if (window.characterQuestionsInstance && window.characterQuestionsInstance.isRendered) {
-            window.characterQuestionsInstance.close();
+        if (instance.isRendered) {
+            instance.close();
             return;
         }
 
         // Create new instance
-        window.characterQuestionsInstance = new CharacterQuestions();
-        window.characterQuestionsInstance.render(true);
+        instance.render(true);
 
         console.log('Character Questions | Floating UI opened successfully');
     } catch (error) {

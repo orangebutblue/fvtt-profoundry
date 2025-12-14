@@ -3,7 +3,7 @@
 <img src="media/logo.png" alt="Profoundry" width="400">
 
 
-Profoundry is a WIP module for Foundry VTT designed to assist GMs in guiding their players with their character development. It gives players the ability to flesh out their existing characters by answering questions about them.
+Profoundry is a module for Foundry VTT designed to assist GMs in guiding their players with their character development. It gives players the ability to flesh out their existing characters by answering questions about them.
 This module provides a curated list of categorized questions that can be to prompt discussions, helping the players develop and understand their characters better.
 The module posts a random question to chat based on the different selected categories.
 

@@ -116,7 +116,7 @@
   ],
   "values": [
     {"en": "Do you have any religious or spiritual beliefs?", "de": "Hast du religiöse oder spirituelle Überzeugungen?"},
-    {"en": "What moral or ethical principles doe you uphold?", "de": "Welche moralischen oder ethischen Prinzipien hälst du ein?"},
+    {"en": "What moral or ethical principles do you uphold?", "de": "Welche moralischen oder ethischen Prinzipien hälst du ein?"},
     {"en": "Are there any causes or ideologies you are passionate about?", "de": "Gibt es Ursachen oder Ideologien, für die du dich leidenschaftlich einsetzt?"},
     {"en": "What goals have you recently set for yourself, and how are you doing on them so far?", "de": "Welche Ziele hast du dir kürzlich gesetzt und wie weit bist du bisher gekommen?"},
     {"en": "Who or what is your enemy?", "de": "Wer oder was ist dein Feind?"},
@@ -138,7 +138,6 @@
     {"en":  "If you could give one piece of advice to pass on to the next generation, what would it be?"},
     {"en":  "What makes a true friendship?"},
     {"en":  "Which is the greater tragedy: an innocent person imprisoned or a guilty person set free? Explain."},
-    {"en":  "What is beauty?"},
     {"en":  "What new law is needed to make the world a better place to live?"},
     {"en":  "Why do bad things happen to good people?"},
     {"en":  "Do you believe that, for the most part, people are basically good, basically bad, or a mixture? Why?"},
