@@ -15,7 +15,7 @@
   "readme": "https://raw.githubusercontent.com/orangebutblue/fvtt-profoundry/refs/heads/main/README.md",
   "manifest": "https://raw.githubusercontent.com/orangebutblue/fvtt-profoundry/main/module.json",
   "download": "https://github.com/orangebutblue/fvtt-profoundry/releases/latest/download/module.zip",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "compatibility": {
     "minimum": "10",
     "verified": "13"

@@ -95,6 +95,8 @@ class CharacterQuestions extends Application {
     }
 
     activateListeners(html) {
+        super.activateListeners(html);
+        
         // Only activate once
         if (this._listenersActivated) return;
         this._listenersActivated = true;
@@ -375,7 +377,10 @@ class CharacterQuestions extends Application {
 
 // Module initialization
 Hooks.once('init', () => {
-    console.log('Character Questions | Initializing module');
+    console.log('Character Questions | Initializing module - START');
+
+    // Register Handlebars helpers for V2 Application templates
+    registerHandlebarsHelpers();
 
     // Register module settings
     registerModuleSettings();
@@ -385,12 +390,12 @@ Hooks.once('init', () => {
 
     // Scene controls will be initialized later in the ready hook
 
-    console.log('Character Questions | Module initialized');
+    console.log('Character Questions | Module initialized - END');
 });
 
 // Ready hook - module fully loaded
 Hooks.once('ready', async () => {
-    console.log('Character Questions | Module ready');
+    console.log('Character Questions | Ready hook fired - START');
 
     try {
         // Initialize native UI integration
@@ -407,18 +412,168 @@ Hooks.once('ready', async () => {
                     console.log('Character Questions | Test button clicked');
                     openCharacterQuestionsDialog();
                 });
-                html.find('.directory').first().prepend(button);
-                console.log('Character Questions | Test button added to sidebar');
+                // Add to sidebar header instead of directory
+                html.find('.sidebar-header').first().append(button);
+                console.log('Character Questions | Test button added to sidebar header');
             }
         });
 
-        console.log('Character Questions | Setup complete');
+        console.log('Character Questions | Setup complete - END');
+
+        // Fallback: Poll for scene controls and add button if needed
+        let pollCount = 0;
+        const maxPolls = 20; // 10 seconds at 500ms intervals
+        const pollInterval = setInterval(() => {
+            pollCount++;
+            console.log(`Character Questions | Poll ${pollCount}: Checking for scene controls`);
+            
+            // Check if button already exists in the actual scene controls
+            const sceneControls = $('#scene-controls');
+            if (sceneControls.length > 0 && sceneControls.find('#character-questions-control').length > 0) {
+                console.log(`Character Questions | Poll ${pollCount}: Button already exists in scene controls, stopping poll`);
+                clearInterval(pollInterval);
+                return;
+            }
+            
+            // Try to add button to scene controls
+            if (sceneControls.length > 0) {
+                console.log(`Character Questions | Poll ${pollCount}: Found scene controls, attempting to add button`);
+                if (addButtonToSceneControls(sceneControls)) {
+                    console.log(`Character Questions | Poll ${pollCount}: Button added successfully, stopping poll`);
+                    clearInterval(pollInterval);
+                    return;
+                }
+            }
+
+            if (pollCount >= maxPolls) {
+                console.log('Character Questions | Polling stopped after max attempts - no suitable element found');
+                clearInterval(pollInterval);
+            }
+        }, 500);
 
     } catch (error) {
         console.error('Character Questions | Setup failed:', error);
         ui.notifications.error(`Character Questions setup failed: ${error.message}`);
     }
 });
+
+/**
+ * Register Handlebars helpers for V2 Application templates
+ */
+function registerHandlebarsHelpers() {
+    const helpers = {
+        // Equality helper for template conditionals
+        'eq': function(a, b) {
+            return a === b;
+        },
+
+        // Inequality helper
+        'ne': function(a, b) {
+            return a !== b;
+        },
+
+        // Greater-than-or-equal helper
+        'gte': function(a, b) {
+            if (typeof a === 'string') a = Number(a);
+            if (typeof b === 'string') b = Number(b);
+            return a >= b;
+        },
+
+        // Greater-than helper
+        'gt': function(a, b) {
+            if (typeof a === 'string') a = Number(a);
+            if (typeof b === 'string') b = Number(b);
+            return a > b;
+        },
+
+        // Date formatting helper
+        'formatDate': function(dateString) {
+            if (!dateString) return 'Unknown';
+
+            // If it's already in the correct format (YYYY-MM-DD HH:mm), return as is
+            if (typeof dateString === 'string' && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(dateString)) {
+                return dateString;
+            }
+
+            // Try to parse and format the date
+            let date;
+            if (typeof dateString === 'string') {
+                date = new Date(dateString);
+            } else if (dateString instanceof Date) {
+                date = dateString;
+            } else if (typeof dateString === 'number') {
+                date = new Date(dateString);
+            } else {
+                return 'Invalid Date';
+            }
+
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                return 'Invalid Date';
+            }
+
+            // Format as YYYY-MM-DD HH:mm
+            const year = date.getFullYear().toString();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+
+            return `${year}-${month}-${day} ${hours}:${minutes}`;
+        },
+
+        // Logical AND helper
+        'and': function() {
+            const args = Array.prototype.slice.call(arguments, 0, -1);
+            return args.every(Boolean);
+        },
+
+        // Logical OR helper
+        'or': function() {
+            const args = Array.prototype.slice.call(arguments, 0, -1);
+            return args.some(Boolean);
+        },
+
+        // Format number helper
+        'formatNumber': function(number) {
+            if (typeof number !== 'number') return number;
+            return number.toLocaleString();
+        },
+
+        // Capitalize helper
+        'capitalize': function(str) {
+            if (typeof str !== 'string') return str;
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        },
+
+        // Join array helper
+        'join': function(array, separator) {
+            if (!Array.isArray(array)) return '';
+            return array.join(separator || ', ');
+        },
+
+        // Keys helper - get object keys
+        'keys': function(obj) {
+            if (!obj || typeof obj !== 'object') return [];
+            return Object.keys(obj);
+        }
+
+        // REMOVED 'selected' helper - it was interfering with Foundry's FilePicker
+        // The FilePicker relies on its own selection logic and this helper was breaking it
+    };
+
+    // Register helpers only if they don't already exist
+    Object.keys(helpers).forEach(helperName => {
+        if (!Handlebars.helpers[helperName]) {
+            Handlebars.registerHelper(helperName, helpers[helperName]);
+            console.log(`Character Questions | Registered Handlebars helper: ${helperName}`);
+        } else {
+            console.log(`Character Questions | Handlebars helper ${helperName} already exists, skipping`);
+        }
+    });
+
+    console.log('Character Questions | Handlebars helpers registration complete');
+}
 
 /**
  * Register module settings with FoundryVTT
@@ -487,13 +642,14 @@ async function initializeBasicSceneControls() {
         console.log('Character Questions | Using hook:', hookName);
 
         Hooks.on(hookName, (controls) => {
-            console.log('Character Questions | Scene controls hook fired - adding controls');
-            console.log('Character Questions | Current controls:', controls.map(c => c.name));
+            console.log('Character Questions | Scene controls hook fired - START');
+            console.log('Character Questions | Hook name:', hookName);
+            console.log('Character Questions | Current controls:', controls.map(c => ({ name: c.name, tools: c.tools?.length || 0 })));
 
             // Check if our control already exists to prevent duplicates
             const existingControl = controls.find(c => c.name === 'character-questions');
             if (existingControl) {
-                console.log('Character Questions | Control already exists, skipping duplicate');
+                console.log('Character Questions | Control already exists, skipping duplicate - END');
                 return;
             }
 
@@ -523,7 +679,7 @@ async function initializeBasicSceneControls() {
             };
 
             controls.push(characterQuestionsControls);
-            console.log('Character Questions | Controls added successfully to scene controls');
+            console.log('Character Questions | Controls added successfully to scene controls - END');
             console.log('Character Questions | Updated controls:', controls.map(c => c.name));
         });
 
@@ -531,24 +687,30 @@ async function initializeBasicSceneControls() {
 
         // Also listen for render to inject our button into the HTML directly
         Hooks.on('renderSceneControls', (app, html, data) => {
-            console.log('Character Questions | renderSceneControls fired');
+            console.log('Character Questions | renderSceneControls fired - START');
+            console.log('Character Questions | App:', app?.constructor?.name);
+            console.log('Character Questions | HTML type:', typeof html, html instanceof jQuery ? 'jQuery' : 'not jQuery');
 
             // Ensure html is a jQuery object
             const $html = html instanceof jQuery ? html : $(html);
+            console.log('Character Questions | HTML element:', $html[0]?.tagName, $html[0]?.id, $html[0]?.className);
 
             // Check if button already exists
             if ($html.find('#character-questions-control').length > 0) {
-                console.log('Character Questions | Button already in HTML');
+                console.log('Character Questions | Button already in HTML - END');
                 return;
             }
 
             console.log('Character Questions | Adding button to scene controls HTML');
 
             const majorVersion = parseInt(game.version?.split('.')[0] || '0');
+            console.log('Character Questions | Major version for controls:', majorVersion);
 
             if (majorVersion >= 13) {
                 // V13+ uses <menu> elements with buttons
+                console.log('Character Questions | Looking for v13 layers menu');
                 const layersMenu = $html.find('menu#scene-controls-layers');
+                console.log('Character Questions | Layers menu found:', layersMenu.length, layersMenu[0]?.tagName);
 
                 if (layersMenu.length > 0) {
                     console.log('Character Questions | Found v13 layers menu, adding button');
@@ -569,21 +731,28 @@ async function initializeBasicSceneControls() {
                         event.preventDefault();
                         event.stopPropagation();
                         openCharacterQuestionsDialog();
+                        return false;
                     });
 
                     layersMenu.append(buttonLi);
-                    console.log('Character Questions | Button added to v13 layers menu');
+                    console.log('Character Questions | Button added to v13 layers menu - END');
                 } else {
                     console.warn('Character Questions | Could not find v13 layers menu');
+                    console.log('Character Questions | Available menus:', $html.find('menu').map((i, el) => `${el.tagName}#${el.id}.${el.className}`).get());
+                    console.log('Character Questions | Full HTML structure:', $html[0]?.outerHTML?.substring(0, 1000));
                 }
             } else {
                 // V11/V12 use <ol> elements with <li> items
+                console.log('Character Questions | Looking for v11/v12 controls list');
                 let controlsList = $html.find('ol.main-controls');
+                console.log('Character Questions | main-controls found:', controlsList.length);
                 if (controlsList.length === 0) {
                     controlsList = $html.find('ol.control-tools');
+                    console.log('Character Questions | control-tools found:', controlsList.length);
                 }
                 if (controlsList.length === 0) {
                     controlsList = $html.find('ol').first();
+                    console.log('Character Questions | first ol found:', controlsList.length, controlsList[0]?.className);
                 }
 
                 if (controlsList.length > 0) {
@@ -598,21 +767,104 @@ async function initializeBasicSceneControls() {
                     buttonLi.on('click', (event) => {
                         console.log('Character Questions | Scene control button clicked!');
                         event.preventDefault();
+                        event.stopPropagation();
                         openCharacterQuestionsDialog();
+                        return false;
                     });
 
                     controlsList.append(buttonLi);
-                    console.log('Character Questions | Button added to v11/v12 controls list');
+                    console.log('Character Questions | Button added to v11/v12 controls list - END');
                 } else {
                     console.warn('Character Questions | Could not find any controls list for v11/v12');
+                    console.log('Character Questions | Available ols:', $html.find('ol').map((i, el) => `${el.tagName}.${el.className}#${el.id}`).get());
                     console.log('Character Questions | HTML structure:', $html[0]?.outerHTML?.substring(0, 500));
                 }
             }
         });
 
+        // Removed dangerous renderApplication hook that was interfering with FilePicker
+        // The combination of renderSceneControls hook + polling is sufficient
+
     } catch (error) {
         console.error('Character Questions | Scene controls integration failed:', error);
         ui.notifications.warn('Character Questions scene controls integration failed.');
+    }
+}
+
+/**
+ * Fallback function to add button directly to scene controls HTML
+ * Returns true if button was added, false otherwise
+ */
+function addButtonToSceneControls($html) {
+    console.log('Character Questions | addButtonToSceneControls called');
+
+    const majorVersion = parseInt(game.version?.split('.')[0] || '0');
+    console.log('Character Questions | Major version for fallback:', majorVersion);
+
+    if (majorVersion >= 13) {
+        const layersMenu = $html.find('menu#scene-controls-layers');
+        if (layersMenu.length > 0) {
+            console.log('Character Questions | Fallback: Adding to v13 layers menu');
+
+            const buttonLi = $(`
+                <li id="character-questions-control">
+                    <button type="button" class="control ui-control layer icon fa-solid fa-question-circle"
+                            role="tab" data-action="control" data-control="character-questions"
+                            data-tooltip="" aria-pressed="false"
+                            aria-label="Character Questions"
+                            aria-controls="scene-controls-tools">
+                    </button>
+                </li>
+            `);
+
+            buttonLi.find('button').on('click', (event) => {
+                console.log('Character Questions | Fallback button clicked!');
+                event.preventDefault();
+                event.stopPropagation();
+                openCharacterQuestionsDialog();
+                return false;
+            });
+
+            layersMenu.append(buttonLi);
+            console.log('Character Questions | Fallback button added to v13 layers menu');
+            return true;
+        } else {
+            console.log('Character Questions | Fallback: No v13 layers menu found, skipping');
+            return false;
+        }
+    } else {
+        let controlsList = $html.find('ol.main-controls');
+        if (controlsList.length === 0) {
+            controlsList = $html.find('ol.control-tools');
+        }
+        if (controlsList.length === 0) {
+            controlsList = $html.find('ol').first();
+        }
+
+        if (controlsList.length > 0) {
+            console.log('Character Questions | Fallback: Adding to v11/v12 controls list');
+
+            const buttonLi = $(`
+                <li id="character-questions-control" class="scene-control" data-control="character-questions" title="Character Questions">
+                    <i class="fas fa-question-circle"></i>
+                </li>
+            `);
+
+            buttonLi.on('click', (event) => {
+                console.log('Character Questions | Fallback button clicked!');
+                event.preventDefault();
+                event.stopPropagation();
+                openCharacterQuestionsDialog();
+                return false;
+            });
+
+            controlsList.append(buttonLi);
+            console.log('Character Questions | Fallback button added to v11/v12 controls list');
+            return true;
+        } else {
+            console.log('Character Questions | Fallback: No v11/v12 controls list found, skipping');
+            return false;
+        }
     }
 }
 
@@ -623,22 +875,15 @@ function openCharacterQuestionsDialog() {
     try {
         console.log('Character Questions | Opening floating UI');
 
-        // Use module-scoped storage instead of global window
-        const moduleScope = game.modules.get(MODULE_ID);
-        if (!moduleScope._characterQuestionsInstance) {
-            moduleScope._characterQuestionsInstance = new CharacterQuestions();
-        }
-
-        const instance = moduleScope._characterQuestionsInstance;
-
         // If already rendered, close it
-        if (instance.isRendered) {
-            instance.close();
+        if (window.characterQuestionsInstance && window.characterQuestionsInstance.isRendered) {
+            window.characterQuestionsInstance.close();
             return;
         }
 
         // Create new instance
-        instance.render(true);
+        window.characterQuestionsInstance = new CharacterQuestions();
+        window.characterQuestionsInstance.render(true);
 
         console.log('Character Questions | Floating UI opened successfully');
     } catch (error) {
